@@ -1,0 +1,54 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+
+        <script src="jszip.min.js"></script>
+
+        <script type="text/javascript">
+
+			const _data = {};
+
+			const downloadData = async () => {
+				const zipUrl = 'https://api.spludlow.net/fbneo/zips/json/1.0.0.3_2022-03-02T04-30-08.zip';
+
+				const xhttp = new XMLHttpRequest();
+
+				return new Promise((resolve, reject) => {
+					xhttp.onload = () => {
+						if (xhttp.status === 200)
+							resolve(xhttp.response);
+						else
+							reject(xhttp.status);
+					}
+
+					xhttp.open('GET', zipUrl, true);
+					xhttp.responseType = 'arraybuffer';
+					xhttp.send();
+				});
+			}
+
+            const setup = async () => {
+
+				const zipData = await downloadData();
+				const jsZip = new JSZip();
+				const zip = await jsZip.loadAsync(zipData);
+
+				await Promise.all(Object.keys(zip.files).map(async filename => {
+					const json = await zip.file(filename).async('string');
+					const name = filename.slice(0, filename.indexOf('.'));
+					_data[name] = JSON.parse(json);
+				}));
+
+				console.log(_data['sgx']);
+			}
+
+			setup();
+
+
+        
+        </script>
+
+    </body>
+</html>
