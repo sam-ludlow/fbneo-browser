@@ -1,14 +1,128 @@
 <html>
     <head>
-
+		<style type="text/css">
+			body {
+				font-family: sans-serif;
+				font-size: small;
+				background-color: #c6eafb;
+			}
+	
+			hr {
+				color: #00ADEF;
+				background-color: #00ADEF;
+				height: 6px;
+				border: none;
+				padding-left: 0px;
+			}
+	
+			table {
+				border-collapse: collapse;
+				font-size: small;
+			}
+	
+			th, td {
+				padding: 2px;
+				text-align: left;
+			}
+	
+			table, th, td {
+				border: 1px solid black;
+			}
+	
+			th {
+				background-color: #00ADEF;
+				color: white;
+			}
+	
+			tr:nth-child(even) {
+				background-color: #b6daeb;
+			}
+	
+			select {
+				width: 100px;
+				height: 20px;
+			}
+	
+			div.busy {
+				position: fixed;
+				z-index: 100;
+				top: 0px;
+				right: 0px;
+				bottom: 0px;
+				left: 0px;
+				background: rgba(255, 255, 255, 0.5);
+			}
+			img.centered {
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				margin-left: -192px;
+				margin-top: -178px;
+				width: 386px;
+				height: 356px;
+			}
+		</style>
     </head>
     <body>
+		<select id="selectSystem" style="width:180px;"></select>
+		<hr />
+		<div id="resultsContainer">
+		</div>
 
-        <script src="jszip.min.js"></script>
+        <script src="https://mame.spludlow.co.uk/jszip.min.js"></script>
 
         <script type="text/javascript">
 
 			const _data = {};
+
+			const RenderHtmlTable = (data) => {
+				if (typeof data !== 'object')
+					return data;	//JSON.stringify(data);
+
+				if (Array.isArray(data) === false) {
+					data = [data];
+				}
+
+				if (data.length === 0)
+					return '[]';
+
+				if (typeof data[0] !== 'object')
+					return data;	//JSON.stringify(data);
+
+				const columnNames = [];
+				data.forEach((row) => {
+					Object.keys(row).forEach(columnName => {
+						if (columnNames.includes(columnName) === false)	// && ignoreColumnNames.includes(columnName) === false)
+							columnNames.push(columnName);
+					});
+				});
+
+				let table = '';
+
+				table += '<table>';
+				table += '<tr>';
+				columnNames.forEach(columnName => {
+					table += `<th>${columnName}</th>`;
+				});
+				table += '</tr>';
+
+				data.forEach((row) => {
+					table += '<tr>';
+					columnNames.forEach(columnName => {
+						let value = '';
+						if (row[columnName] !== undefined) {
+							value = RenderHtmlTable(row[columnName]);
+						}
+
+						table += `<td>${value}</td>`;
+					});
+					table += '</tr>';
+				});
+
+				table += '</table>';
+
+				return table;
+			};
 
 			const downloadData = async () => {
 				const zipUrl = 'https://api.spludlow.net/fbneo/zips/json/1.0.0.3_2022-03-02T04-30-08.zip';
@@ -29,19 +143,53 @@
 				});
 			}
 
+			const display = () => {
+
+				const system = document.getElementById('selectSystem').value;
+				const tableDiv = document.getElementById('resultsContainer');
+
+				tableDiv.innerHTML = RenderHtmlTable(_data[system].datafile.game);
+
+			}
+
+			const buildDropDown = (id, values) => {
+				const select = document.getElementById(id);
+
+				select.onchange = display;
+
+				values.forEach(function (value, index) {
+					const option = document.createElement('option');
+					option.value = value;
+					option.innerHTML = value;	//htmlEncode(value) + ' #' + filterCounts[id][value];
+					select.appendChild(option);
+				});
+
+			}
+
             const setup = async () => {
 
 				const zipData = await downloadData();
 				const jsZip = new JSZip();
 				const zip = await jsZip.loadAsync(zipData);
 
+				const systems = [];
+
 				await Promise.all(Object.keys(zip.files).map(async filename => {
 					const json = await zip.file(filename).async('string');
 					const name = filename.slice(0, filename.indexOf('.'));
+					console.log(name);
+					systems.push(name);
 					_data[name] = JSON.parse(json);
 				}));
+				systems.sort();
 
-				console.log(_data['sgx']);
+				buildDropDown("selectSystem", systems);
+
+				const tableDiv = document.getElementById('resultsContainer');
+
+				//	.datafile.header
+				//tableDiv.innerHTML = RenderHtmlTable(_data['megadrive'].datafile.game);
+				//tableDiv.appendChild(RenderHtmlTable(_data['sgx']));
 			}
 
 			setup();
