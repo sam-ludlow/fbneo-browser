@@ -64,7 +64,10 @@
 		</style>
     </head>
     <body>
-		<select id="selectSystem" style="width:180px;"></select>
+		<select id="selectRelease" style="width:256px;"></select>
+
+		<select id="selectSystem" style="width:256px;"></select>
+
 		<hr />
 		<div id="resultsContainer">
 		</div>
@@ -73,7 +76,14 @@
 
         <script type="text/javascript">
 
+			const _thisUrl = window.location.href.split("?")[0];
+
 			const _data = {};
+
+			let _roms = {};
+
+			const _selectRelease = document.getElementById('selectRelease');
+			const _selectSystem = document.getElementById('selectSystem');
 
 			const RenderHtmlTable = (data) => {
 				if (typeof data !== 'object')
@@ -124,8 +134,8 @@
 				return table;
 			};
 
-			const downloadData = async () => {
-				const zipUrl = 'https://api.spludlow.net/fbneo/zips/json/1.0.0.3_2022-03-02T04-30-08.zip';
+			const downloadData = async (release) => {
+				const zipUrl = `https://api.spludlow.net/fbneo/zips/json/${release}`;
 
 				const xhttp = new XMLHttpRequest();
 
@@ -155,8 +165,6 @@
 			const buildDropDown = (id, values) => {
 				const select = document.getElementById(id);
 
-				select.onchange = display;
-
 				values.forEach(function (value, index) {
 					const option = document.createElement('option');
 					option.value = value;
@@ -166,9 +174,97 @@
 
 			}
 
+			const queryParamters = () => {
+				const results = {};
+
+				let parameters = window.location.search.split('?');
+
+				if (parameters.length > 1) {
+					parameters = parameters[1].split('&');
+
+					parameters.forEach((parameter) => {
+						const parts = parameter.split('=');
+						results[decodeURI(parts[0])] = parts.length === 2 ? decodeURI(parts[1]) : undefined;
+					});
+					
+				}
+
+				return results;
+			}
+
+			const goLocation = () => {
+				document.location = `${_thisUrl}?release=${encodeURIComponent(_selectRelease.value)}`;
+			}
+
+			const fixData = () => {
+
+
+
+				Object.keys(_data).forEach(systemName => {
+					
+					const data = _data[systemName].datafile.game;
+
+					_roms[systemName] = {};
+
+					data.forEach((game) => {
+						if (game.driver && game.driver.status) {
+							game.status = game.driver.status;
+							delete game.driver;
+						}
+
+						if (game.video) {
+							Object.keys(game.video).forEach((name) => {
+								game[`${name}`] = game.video[name];
+							});
+							delete game.video;
+						}
+
+						if (game.rom) {
+							_roms[systemName][game.name] = game.rom;
+							delete game.rom;
+						}
+
+						if (game.sample) {
+							// TODO
+							delete game.sample;
+						}
+
+					});
+
+				});
+
+			}
+
             const setup = async () => {
 
-				const zipData = await downloadData();
+				// Get releases & current release
+
+				const response = await fetch('https://api.spludlow.net/fbneo/releases');
+
+				const releases = (await response.json()).results;
+
+				buildDropDown('selectRelease', releases.map(r => r.ReleaseName));
+
+				const parameters = queryParamters();
+
+				let release = parameters.release;
+
+				if (!release)
+					goLocation();
+
+				Object.keys(_selectRelease.options).forEach((key, index) => {
+					const option = _selectRelease.options[key];
+					if (option.text === release)
+						_selectRelease.selectedIndex = index;
+				});
+
+				_selectRelease.onchange = goLocation;
+
+				release = _selectRelease.value;
+
+				// Get systems data
+
+				const zipData = await downloadData(release);
 				const jsZip = new JSZip();
 				const zip = await jsZip.loadAsync(zipData);
 
@@ -183,13 +279,16 @@
 				}));
 				systems.sort();
 
+				fixData();
+
 				buildDropDown("selectSystem", systems);
+				_selectSystem.onchange = display;
 
-				const tableDiv = document.getElementById('resultsContainer');
+				_selectSystem.selectedIndex = 1;	// arcade is slow to load
 
-				//	.datafile.header
-				//tableDiv.innerHTML = RenderHtmlTable(_data['megadrive'].datafile.game);
-				//tableDiv.appendChild(RenderHtmlTable(_data['sgx']));
+
+				display();
+
 			}
 
 			setup();
