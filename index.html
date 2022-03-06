@@ -65,9 +65,9 @@
     </head>
     <body>
 		<select id="selectRelease" style="width:256px;"></select>
-
 		<select id="selectSystem" style="width:256px;"></select>
 
+		Have patiance when loading "arcade". TODO: Click for ROM data
 		<hr />
 		<div id="resultsContainer">
 		</div>
@@ -261,6 +261,8 @@
 				_selectRelease.onchange = goLocation;
 
 				release = _selectRelease.value;
+
+				document.title = `${release} (Spludlow FBNeo browser)`;
 
 				// Get systems data
 
