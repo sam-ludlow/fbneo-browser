@@ -68,7 +68,7 @@
 		<select id="selectRelease" style="width:256px;"></select>
 		<select id="selectSystem" style="width:256px;"></select>
 
-		Have patiance when loading "arcade". TODO: Click for ROM data
+		Have patiance when loading "arcade". Click table rows for ROM data.
 		<hr />
 		<div id="resultsContainer">
 		</div>
@@ -86,19 +86,71 @@
 			const _selectRelease = document.getElementById('selectRelease');
 			const _selectSystem = document.getElementById('selectSystem');
 
-			const RenderHtmlTable = (data) => {
-				if (typeof data !== 'object')
-					return data;	//JSON.stringify(data);
+			const tableClick = async (event) => {
+				const elementId = event.target.parentNode.id;
 
-				if (Array.isArray(data) === false) {
-					data = [data];
+				if (elementId) {
+
+					const system = _selectSystem.value;
+
+					console.log(elementId);
+
+					const tableRow = event.target.parentNode;
+
+
+					const id = `roms_cell_${elementId}`;
+
+					let cell = document.getElementById(id);
+
+					if (cell === null) {
+						const cell = tableRow.insertCell(0);
+						
+						document.createElement('td');
+						cell.id = id;
+						const romData = _roms[system][elementId];
+
+						cell.appendChild(RenderHtmlTable(romData));
+
+						//tableRow.appendChild(cell);
+					} else {
+						tableRow.removeChild(cell);
+					}
+
+
+				/*	const source = elementId.substring(0, 1);
+					const id = elementId.substring(1);
+
+					if (source === 'd') {
+
+						_datafile_Id = id;
+						_datafile = await loadData(_datafile_Id);
+
+						if (_selectedDatafileId !== -1)
+							selectTableRow(_selectedDatafileId, false);
+
+						_selectedDatafileId = elementId;
+						selectTableRow(_selectedDatafileId, true);
+
+						_selectedGameId = -1;
+					}
+
+					if (source === 'g') {
+						_game_Id = id;
+
+						if (_selectedGameId !== -1)
+							selectTableRow(_selectedGameId, false);
+
+						_selectedGameId = elementId;
+						selectTableRow(_selectedGameId, true);
+					}
+
+					show(source);*/
+
+
 				}
+			}
 
-				if (data.length === 0)
-					return '[]';
-
-				if (typeof data[0] !== 'object')
-					return data;	//JSON.stringify(data);
+			const RenderHtmlTable = (data, clickListener) => {
 
 				const columnNames = [];
 				data.forEach((row) => {
@@ -108,32 +160,55 @@
 					});
 				});
 
-				let table = '';
+				const table = document.createElement('table');
 
-				table += '<table>';
-				table += '<tr>';
+				//	table.style.width = '100%';
+
+				const headingRow = document.createElement('tr');
 				columnNames.forEach(columnName => {
-					table += `<th>${columnName}</th>`;
+					const headingCell = document.createElement('th');
+					headingCell.innerHTML = columnName;
+					headingRow.appendChild(headingCell);
 				});
-				table += '</tr>';
+				table.appendChild(headingRow);
 
 				data.forEach((row) => {
-					table += '<tr>';
-					columnNames.forEach(columnName => {
-						let value = '';
-						if (row[columnName] !== undefined) {
-							value = RenderHtmlTable(row[columnName]);
+					const tableRow = document.createElement('tr');
+					columnNames.forEach((columnName, columnIndex) => {
+						const cell = document.createElement('td');
+
+						let value = row[columnName];
+						if (value !== undefined) {
+							if (typeof value === 'object') {
+
+								if (Array.isArray(value) === false)
+									value = [value];
+
+								if (value.length > 0 && typeof value[0] === 'object') {
+									cell.appendChild(RenderHtmlTable(value));
+									value = undefined;
+								}
+							}
 						}
 
-						table += `<td>${value}</td>`;
+						if (value !== undefined) {
+							cell.innerHTML = value;	//htmlEncode(data);
+
+							if (columnIndex === 0 && clickListener !== null)
+								tableRow.id = value;
+						}
+
+						tableRow.appendChild(cell);
 					});
-					table += '</tr>';
+					table.appendChild(tableRow);
 				});
 
-				table += '</table>';
+				if (clickListener)
+					table.addEventListener('click', clickListener);
 
 				return table;
 			};
+
 
 			const downloadData = async (release) => {
 				const zipUrl = `https://api.spludlow.net/fbneo/zips/json/${release}`;
@@ -159,7 +234,8 @@
 				const system = document.getElementById('selectSystem').value;
 				const tableDiv = document.getElementById('resultsContainer');
 
-				tableDiv.innerHTML = RenderHtmlTable(_data[system].datafile.game);
+				tableDiv.innerHTML = '';
+				tableDiv.appendChild(RenderHtmlTable(_data[system].datafile.game, tableClick));
 
 			}
 
