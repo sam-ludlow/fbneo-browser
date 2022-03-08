@@ -294,7 +294,7 @@
 						}
 
 						if (game.rom) {
-							_roms[systemName][game.name] = game.rom;
+							_roms[systemName][game.name] = Array.isArray(game.rom) ? game.rom : [game.rom];
 							delete game.rom;
 						}
 
