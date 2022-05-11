@@ -211,7 +211,7 @@
 
 
 			const downloadData = async (release) => {
-				const zipUrl = `https://api.spludlow.net/fbneo/zips/json/${release}`;
+				const zipUrl = `https://api.spludlow.net:777/fbneo/zips/json/${release}`;
 
 				const xhttp = new XMLHttpRequest();
 
@@ -311,7 +311,7 @@
 
 				// Get releases & current release
 
-				const response = await fetch('https://api.spludlow.net/fbneo/releases');
+				const response = await fetch('https://api.spludlow.net:777/fbneo/releases');
 
 				const releases = (await response.json()).results;
 
